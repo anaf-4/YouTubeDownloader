@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-input: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --text-primary: #f5f5f7;
+            --text-secondary: #8b8b9e;
+            --text-muted: #5a5a6e;
+            --accent: #ff0033;
+            --accent-hover: #ff1a4a;
+            --accent-glow: rgba(255, 0, 51, 0.3);
+            --success: #00d26a;
+            --error: #ff4757;
+            --warning: #ffa502;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 20%, rgba(255, 0, 51, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 50%, rgba(255, 0, 51, 0.03) 0%, transparent 70%);
+            animation: bgFloat 20s ease-in-out infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, 1%) rotate(1deg); }
+            66% { transform: translate(-1%, -2%) rotate(-1deg); }
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: 0;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), #ff4d6d);
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px var(--accent-glow);
+        }
+
+        .logo svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(20px);
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .card-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+        }
+
+        .card-header h2 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.2s ease;
+            line-height: 1.6;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            flex: 1;
+            justify-content: center;
+            padding: 14px 24px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 20px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-row input {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .input-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .options-section {
+            margin-bottom: 16px;
+        }
+
+        .options-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .options-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .option-item {
+            position: relative;
+        }
+
+        .option-item input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .option-item label {
+            display: block;
+            padding: 8px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .option-item label:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+        }
+
+        .option-item input[type="radio"]:checked + label {
+            background: rgba(255, 0, 51, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .progress-section {
+            margin-bottom: 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-percent {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-input);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff4d6d);
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .status-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .status-text {
+            color: var(--text-secondary);
+        }
+
+        .status-text.downloading {
+            color: var(--accent);
+        }
+
+        .status-text.completed {
+            color: var(--success);
+        }
+
+        .status-text.error {
+            color: var(--error);
+        }
+
+        .speed-eta {
+            display: flex;
+            gap: 16px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .speed-eta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .log-container {
+            max-height: 140px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 12px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            margin-bottom: 16px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .log-entry {
+            padding: 3px 0;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .log-entry.error {
+            color: var(--error);
+        }
+
+        .log-entry.success {
+            color: var(--success);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 14px;
+            color: var(--text-primary);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--error);
+        }
+
+        footer {
+            text-align: center;
+            padding: 32px 0 16px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px 16px;
+            }
+            header h1 {
+                font-size: 1.5rem;
+            }
+            .options-grid {
+                gap: 6px;
+            }
+            .option-item label {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z"/></svg>
+            </div>
+            <h1>YouTube Downloader</h1>
+            <p>영상을 쉽고 빠르게 다운로드하세요</p>
+        </header>
+
+        <div class="card">
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                <h2>URL 입력</h2>
+            </div>
+            <textarea id="urls" placeholder="YouTube URL을 한 줄에 하나씩 입력하세요&#10;재생목록 URL도 지원합니다"></textarea>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="pasteUrl()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    붙여넣기
+                </button>
+                <button class="btn btn-secondary" onclick="clearUrls()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    지우기
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                <h2>저장 경로</h2>
+            </div>
+            <div class="input-row">
+                <input type="text" id="savePath" value="C:/Users/user/Downloads">
+                <button class="btn btn-secondary" onclick="resetPath()">기본값</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+                <h2>옵션</h2>
+            </div>
+            <div class="options-section">
+                <div class="options-label">화질</div>
+                <div class="options-grid">
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="bestvideo[height<=1080]" id="q1" checked>
+                        <label for="q1">최고 화질</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="bestvideo[height<=2160]" id="q2">
+                        <label for="q2">4K</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="bestvideo[height<=1440]" id="q3">
+                        <label for="q3">1440p</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="bestvideo[height<=1080]" id="q4">
+                        <label for="q4">1080p</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="bestvideo[height<=720]" id="q5">
+                        <label for="q5">720p</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="bestvideo[height<=360]" id="q6">
+                        <label for="q6">360p</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="quality" value="audio" id="q7">
+                        <label for="q7">오디오만</label>
+                    </div>
+                </div>
+            </div>
+            <div class="options-section">
+                <div class="options-label">포맷</div>
+                <div class="options-grid">
+                    <div class="option-item">
+                        <input type="radio" name="format" value="mp4" id="f1" checked>
+                        <label for="f1">MP4</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="format" value="webm" id="f2">
+                        <label for="f2">WEBM</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="format" value="mp3" id="f3">
+                        <label for="f3">MP3</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <h2>다운로드</h2>
+            </div>
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="status-text" id="statusText">대기 중</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="speed-eta">
+                    <span id="speedText"></span>
+                    <span id="etaText"></span>
+                </div>
+            </div>
+            <div class="log-container" id="logContainer"></div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="downloadBtn" onclick="startDownload()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    다운로드 시작
+                </button>
+                <button class="btn btn-secondary" onclick="resetStatus()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            저작권이 있는 영상은 개인 소장 목적으로만 사용하세요
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let statusInterval = null;
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function pasteUrl() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('urls').value += text + '\n';
+            } catch {
+                showToast('클립보드 접근이 거부되었습니다.', 'error');
+            }
+        }
+
+        function clearUrls() {
+            document.getElementById('urls').value = '';
+        }
+
+        function resetPath() {
+            document.getElementById('savePath').value = 'C:/Users/user/Downloads';
+        }
+
+        async function startDownload() {
+            const urls = document.getElementById('urls').value;
+            const savePath = document.getElementById('savePath').value;
+            const quality = document.querySelector('input[name="quality"]:checked').value;
+            const format = document.querySelector('input[name="format"]:checked').value;
+
+            if (!urls.trim()) {
+                showToast('URL을 입력하세요.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/></svg> 다운로드 중...';
+
+            document.getElementById('logContainer').innerHTML = '';
+
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urls, save_path: savePath, quality, format })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    showToast(data.error || '오류가 발생했습니다.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> 다운로드 시작';
+                    return;
+                }
+
+                showToast('다운로드를 시작합니다.', 'success');
+                startStatusPolling();
+            } catch {
+                showToast('서버 연결에 실패했습니다.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> 다운로드 시작';
+            }
+        }
+
+        function startStatusPolling() {
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+
+                    const pct = Math.round(data.progress);
+                    document.getElementById('progressFill').style.width = pct + '%';
+                    document.getElementById('progressPercent').textContent = pct + '%';
+
+                    const statusEl = document.getElementById('statusText');
+                    statusEl.textContent = data.message;
+                    statusEl.className = 'status-text';
+                    if (data.status === 'downloading') statusEl.classList.add('downloading');
+                    else if (data.status === 'completed') statusEl.classList.add('completed');
+                    else if (data.status === 'error') statusEl.classList.add('error');
+
+                    document.getElementById('speedText').textContent = data.speed ? data.speed : '';
+                    document.getElementById('etaText').textContent = data.eta ? data.eta : '';
+
+                    const logContainer = document.getElementById('logContainer');
+                    if (data.log && data.log.length > 0) {
+                        logContainer.innerHTML = data.log.map(entry => {
+                            const cls = entry.includes('오류') ? 'error' : entry.includes('완료') ? 'success' : '';
+                            return `<div class="log-entry ${cls}">${entry}</div>`;
+                        }).join('');
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+
+                    if (data.status === 'completed') {
+                        clearInterval(statusInterval);
+                        const btn = document.getElementById('downloadBtn');
+                        btn.disabled = false;
+                        btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> 다운로드 시작';
+                        showToast('다운로드가 완료되었습니다!', 'success');
+                    }
+                } catch {
+                    clearInterval(statusInterval);
+                    const btn = document.getElementById('downloadBtn');
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> 다운로드 시작';
+                }
+            }, 1000);
+        }
+
+        async function resetStatus() {
+            await fetch('/api/reset', { method: 'POST' });
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('statusText').textContent = '대기 중';
+            document.getElementById('statusText').className = 'status-text';
+            document.getElementById('speedText').textContent = '';
+            document.getElementById('etaText').textContent = '';
+            document.getElementById('logContainer').innerHTML = '';
+            if (statusInterval) clearInterval(statusInterval);
+            const btn = document.getElementById('downloadBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> 다운로드 시작';
+        }
+
+        fetch('/api/status').then(r => r.json()).then(data => {
+            if (data.log && data.log.length > 0) {
+                const logContainer = document.getElementById('logContainer');
+                logContainer.innerHTML = data.log.map(entry => {
+                    const cls = entry.includes('오류') ? 'error' : entry.includes('완료') ? 'success' : '';
+                    return `<div class="log-entry ${cls}">${entry}</div>`;
+                }).join('');
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
